@@ -33,19 +33,21 @@ Automates LinkedIn Easy Apply end-to-end: finds jobs, answers application questi
 ```
 chromium-browser --remote-debugging-port=9222 --user-data-dir=data/chromium_user_data --no-first-run --no-default-browser-check --no-sandbox --disable-gpu --disable-dev-shm-usage
 ```
-2) Install Python deps (3.10+ recommended)
+2) Login to LinkedIn on the browser
+
+3) Install Python deps (3.10+ recommended)
 ```
 pip install -r requirements.txt
 ```
 
-3) Prepare env and data
+4) Prepare env and data
 - Create .env with OPENAI_API_KEY=your_key_here
 - Configure config/tla_config.yaml with:
 - Populate data/:
   - defaultanswers.json — known label→answer map
   - myinfo.txt — short personal facts (authoritative)
   - *.pdf — resume/portfolio/certs for retrieval
-4) Run
+5) Run
     ```
     python main.py
     ```
