@@ -6,17 +6,34 @@ import yaml
 from src.connect import connect_browser
 from src.utils import make_linkedin_url, get_attributes
 from src.job_data import get_job_info, validate_job_info
+from src.process_application import loop_through_form
+from src.the_ai_bit import VectorRetriever, get_langchain_llm
 import json
 from src.database import setup_database
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv()
 
-CONFIG_PATH = "config/nodriver_config.yaml"
-DATABASE_PATH = "database"
+ROOT_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = ROOT_DIR / "config" / "tla_config.yaml"
+CSS_SELECTOR_PATH = ROOT_DIR / "config" / "css_selectors.yaml"
+DATABASE_PATH = ROOT_DIR / "database"
+DATA_PATH = ROOT_DIR / "data"
+
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
+with open(CSS_SELECTOR_PATH, "r") as f:
+    css_selectors = yaml.safe_load(f)
+#get the llm
+llm = get_langchain_llm()
 
-
+#get default answers
+with open(DATA_PATH / "default_answers.json", "r") as f:
+    default_answers = json.load(f)
 
 async def main():
+
+    ## SETUP DATABASE AND BROWSER CONNECTION
     db = setup_database(DATABASE_PATH, include_applications=True)
     browser = await connect_browser(
         host=config["connection"]["HOST"],
@@ -35,12 +52,16 @@ async def main():
             easy_apply=config["search"]["easy_apply"]
         )
     )
+    ## SETUP THE AI RETRIEVER
+
+    the_ai = VectorRetriever(llm)
+    the_ai.create_qa_chain()
 
     # Loop through pages. Should add this later
 
     await asyncio.sleep(5)  # Wait for page to load
 
-    job_cards = await page.find_all("semantic-search-results-list__list-item")
+    job_cards = await page.find_all(css_selectors["job_card"]["job_card"])
     print(f"Found {len(job_cards)} job cards.")
     # exit()
     for job in job_cards:
@@ -48,7 +69,8 @@ async def main():
         #scroll card into view so that card details load
         await job.scroll_into_view()
         await asyncio.sleep(1)
-        await job.click()
+        title_elem = await job.query_selector(css_selectors["job_card"]["job_title"])
+        await title_elem.click()
         await asyncio.sleep(2)  # Wait for job details to load
 
 
@@ -58,6 +80,22 @@ async def main():
         else:
             print("Invalid job information:", job_info)
         # await asyncio.sleep(3)  # Pause before next job
+
+        #click easy apply if available
+        easy_apply_btn = await page.query_selector(css_selectors["job_card"]["easy_apply_button"])
+        if easy_apply_btn:
+            await easy_apply_btn.scroll_into_view()
+            await easy_apply_btn.click()
+            print("Clicked Easy Apply button.")
+
+            #process application
+            question_answers = await loop_through_form(page, the_ai, default_answers=default_answers,use_ai=config["langchain"].get("use_ai", True))
+            if question_answers is None:
+                print("Unable to process application form. Skipping to next job.")
+                continue
+            result = db.save_application_qna(job_info["job_id"], question_answers)
+            db.finalize_application(job_info["job_id"], result["application_id"], response_details="Easy Apply success")
+            #save questions and update uploaded status in db
 
 
 if __name__ == "__main__":

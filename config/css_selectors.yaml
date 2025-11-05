@@ -1,12 +1,24 @@
 job_card:
-  job_card: data-job-id
+  job_card: semantic-search-results-list__list-item
+  job_card_wrapper: .job-card-job-posting-card-wrapper
+  job_id: data-job-id
   job_title: strong
   job_company: .artdeco-entity-lockup__subtitle
   job_location: .artdeco-entity-lockup__caption
+  easy_apply_button: button.jobs-apply-button
 hirer: 
   hirer_information: .hirer-card__hirer-information
   hirer_profile_link: a
 job_details:
   job_description_container: .jobs-description__container p
+form_elements:
+  form_element: .fb-dash-form-element
+  inline_feedback: .artdeco-inline-feedback__message
+  submit_button: button[aria-label="Submit application"]
+  next_button: button[aria-label="Continue to next step"]
+  review_button: button[aria-label="Review your application"]
+  dismiss_button: button[aria-label="Dismiss"]
+  discard_button: Discard
+
   
   

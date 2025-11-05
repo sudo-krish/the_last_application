@@ -607,6 +607,167 @@ class DatabaseManager:
         with self.get_connection() as conn:
             conn.execute("CHECKPOINT")
             logger.info("Database optimized")
+    def save_application_qna(self, job_id: str, qa: dict, application_method: str = "easy_apply", notes: str = None) -> dict:
+        """
+        Persist a simple dict of {question_text: response} for a given job_id.
+        - Creates (or reuses) an application row for this job_id.
+        - Upserts each question into form_questions (scoped by job_id).
+        - Inserts a response row for each question for this application.
+        
+        Args:
+            job_id: External job identifier (matches jobs.job_id)
+            qa: Dict mapping question_text -> response (str | dict | list | None)
+            application_method: How the application was made (e.g., 'easy_apply')
+            notes: Optional notes to store on the application
+        
+        Returns:
+            Dict with keys:
+                application_id: int
+                questions_upserted: int
+                responses_inserted: int
+        """
+        if not job_id:
+            raise ValueError("job_id is required")
+        if not isinstance(qa, dict) or not qa:
+            raise ValueError("qa must be a non-empty dict of {question_text: response}")
+        
+        # Normalizer: split response into response_value (display string) and response_data (JSON)
+        def split_response(resp):
+            # If scalar, store as response_value; if complex, store as JSON
+            if resp is None:
+                return None, None
+            if isinstance(resp, (str, int, float, bool)):
+                return str(resp), None
+            # list/dict/other → put into response_data JSON, keep a short display value
+            try:
+                # Short readable display value
+                display = None
+                if isinstance(resp, list):
+                    display = ", ".join([str(x) for x in resp[:5]]) + ("..." if len(resp) > 5 else "")
+                elif isinstance(resp, dict):
+                    # Show first 3 key:val pairs as preview
+                    items = list(resp.items())[:3]
+                    display = ", ".join([f"{k}: {v}" for k, v in items])
+                else:
+                    display = str(resp)
+                return display, resp
+            except Exception:
+                return None, None
+        
+        with self.get_connection() as conn:
+            # Begin transaction
+            conn.execute("BEGIN")
+            try:
+                # 1) Create or reuse application
+                existing = conn.execute("""
+                    SELECT application_id 
+                    FROM applications 
+                    WHERE job_id = ? 
+                    ORDER BY applied_date DESC 
+                    LIMIT 1
+                """, [job_id]).fetchone()
+                
+                if existing:
+                    application_id = existing[0]
+                else:
+                    application_id = conn.execute("""
+                        INSERT INTO applications (job_id, status, application_method, notes)
+                        VALUES (?, 'submitted', ?, ?)
+                        RETURNING application_id
+                    """, [job_id, application_method, notes]).fetchone()[0]
+                
+                questions_upserted = 0
+                responses_inserted = 0
+                
+                for question_text, resp in qa.items():
+                    if not question_text or not isinstance(question_text, str):
+                        continue  # skip invalid question text
+                    
+                    # 2) Upsert question (scope by job_id + question_text)
+                    row = conn.execute("""
+                        SELECT question_id 
+                        FROM form_questions 
+                        WHERE job_id IS NOT DISTINCT FROM ? 
+                        AND question_text = ?
+                        LIMIT 1
+                    """, [job_id, question_text]).fetchone()
+                    
+                    if row:
+                        question_id = row[0]
+                    else:
+                        question_id = conn.execute("""
+                            INSERT INTO form_questions (job_id, question_text, question_type, is_required, options, display_order)
+                            VALUES (?, ?, NULL, false, NULL, NULL)
+                            RETURNING question_id
+                        """, [job_id, question_text]).fetchone()[0]
+                        questions_upserted += 1
+                    
+                    # 3) Insert response
+                    response_value, response_data = split_response(resp)
+                    conn.execute("""
+                        INSERT INTO form_responses (application_id, question_id, response_value, response_data)
+                        VALUES (?, ?, ?, ?)
+                    """, [application_id, question_id, response_value, response_data])
+                    responses_inserted += 1
+                
+                # Commit transaction
+                conn.execute("COMMIT")
+                return {
+                    "application_id": application_id,
+                    "questions_upserted": questions_upserted,
+                    "responses_inserted": responses_inserted
+                }
+            except Exception as e:
+                conn.execute("ROLLBACK")
+                raise
+    def finalize_application(self, job_id: str, application_id: int, confirmation_number: str | None = None, response_details: str | None = None) -> None:
+        """
+        Mark an application as successfully submitted and toggle the job's is_applied flag.
+        Runs in a single transaction for consistency.
+
+        Args:
+            job_id: External job identifier (jobs.job_id)
+            application_id: The applications.application_id to finalize
+            confirmation_number: Optional confirmation/tracking number captured after submit
+            response_details: Optional free-text details from the submission (e.g., success message)
+
+        Effects:
+            - jobs.is_applied = TRUE, jobs.last_updated = CURRENT_TIMESTAMP
+            - applications.status = 'submitted', response_received = TRUE, response_date = CURRENT_TIMESTAMP
+            - applications.confirmation_number / response_details updated if provided
+        """
+        if not job_id:
+            raise ValueError("job_id is required")
+        if not application_id:
+            raise ValueError("application_id is required")
+
+        with self.get_connection() as conn:
+            conn.execute("BEGIN")
+            try:
+                # 1) Toggle the job flag
+                conn.execute("""
+                    UPDATE jobs
+                    SET is_applied = TRUE,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE job_id = ?
+                """, [job_id])
+
+                # 2) Update application status and metadata
+                conn.execute("""
+                    UPDATE applications
+                    SET status = 'submitted',
+                        response_received = TRUE,
+                        response_date = CURRENT_TIMESTAMP,
+                        confirmation_number = COALESCE(?, confirmation_number),
+                        response_details = COALESCE(?, response_details)
+                    WHERE application_id = ?
+                """, [confirmation_number, response_details, application_id])
+
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
 
 
 # Convenience function for quick setup

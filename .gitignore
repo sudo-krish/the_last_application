@@ -7,3 +7,4 @@ data/*
 
 !database/.gitkeep
 !/data/my_info.txt
+!/data/default_answers.example.json

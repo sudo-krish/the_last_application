@@ -1,7 +1,7 @@
 connection:
   HOST: 127.0.0.1
   port: 9222
-  user_data_dir: data/tla_user_data
+  user_data_dir: data/chromium_user_data
   headless: false
   no_sandbox: true
 
@@ -10,3 +10,13 @@ search:
   query: "Software Engineer"
   easy_apply: true
   geo_id: 102299470
+
+langchain:
+  use_ai: true
+  using_ollama: false
+  model_name: "gpt-4o"
+  temperature: 0.7
+
+user_data:
+  info_file: data/my_info.txt
+  resume_file: data/my_resume.pdf

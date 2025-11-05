@@ -6,7 +6,7 @@ import yaml
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = ROOT_DIR / "config" / "nodriver_config.yaml"
+CONFIG_PATH = ROOT_DIR / "config" / "tla_config.yaml"
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
