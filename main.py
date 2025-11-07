@@ -70,12 +70,13 @@ async def main():
     applied_counter = 0
     max_jobs = config["search"].get("max_jobs", 10)
     
-    print(f"Found {len(job_cards)} job cards.")
+    
     # exit()
 
     page_number = 1
     while applied_counter < max_jobs:
         job_cards = await page.find_all(css_selectors["job_card"]["job_card"])
+        print(f"Found {len(job_cards)} job cards.")
         for job in job_cards:
 
             #scroll card into view so that card details load

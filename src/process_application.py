@@ -49,6 +49,7 @@ async def loop_through_form_elements(page, the_ai, default_answers={}, use_ai=Tr
             options = await input_elem.query_selector_all("option")
             output_options = []
             for option in options:
+                print(" - Option:", option.text)
                 output_options.append(option.text)
             inline_feedback = await check_inline_feedback(item)
             answer = await answer_questions(the_ai, label.text.strip("*"), output_options=output_options, default_answers=default_answers, inline_feedback=inline_feedback)
