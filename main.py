@@ -15,7 +15,7 @@ from pathlib import Path
 import argparse
 
 parser = argparse.ArgumentParser(description="Process job applications.")
-parser.add_argument("--search_query", type=str, help="Job search query", default="AI Engineer")
+parser.add_argument("--search_query", type=str, help="Job search query", default="Data Engineer")
 args = parser.parse_args()
 load_dotenv()
 

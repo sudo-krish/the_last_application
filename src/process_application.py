@@ -37,6 +37,8 @@ async def loop_through_form_elements(page, the_ai, default_answers={}, use_ai=Tr
                                                 output_options=[], 
                                                 inline_feedback=inline_feedback,
                                                 use_ai=use_ai)
+                #created by sudo-krish email:krishnanand.anil2010@gmail.com
+                answer = the_ai.parse_answer(answer, label.text.strip("*"), output_options=[])
                 print(" - Answer:", answer)
                 await input_elem.clear_input()
                 await input_elem.send_keys(answer)
@@ -53,6 +55,8 @@ async def loop_through_form_elements(page, the_ai, default_answers={}, use_ai=Tr
                 output_options.append(option.text)
             inline_feedback = await check_inline_feedback(item)
             answer = await answer_questions(the_ai, label.text.strip("*"), output_options=output_options, default_answers=default_answers, inline_feedback=inline_feedback)
+            # created by sudo-krish email:krishnanand.anil2010@gmail.com
+            answer = the_ai.parse_answer(answer, label.text.strip("*"), output_options=[])
             await input_elem.send_keys(answer)
             print(" - Answer:", answer)
             # for option in options:
@@ -75,6 +79,8 @@ async def loop_through_form_elements(page, the_ai, default_answers={}, use_ai=Tr
                 output_options.append(option.text)
             inline_feedback = await check_inline_feedback(item)
             answer = await answer_questions(the_ai, label.text.strip("*"), output_options=output_options, default_answers=default_answers, inline_feedback=inline_feedback)
+            # created by sudo-krish email:krishnanand.anil2010@gmail.com
+            answer = the_ai.parse_answer(answer, label.text.strip("*"), output_options=[])
             print(" - Answer:", answer)
             for option in options:
                 if option.text.strip().lower() == answer.strip().lower():

@@ -7,15 +7,18 @@ connection:
 
 search:
   base_url: "https://www.linkedin.com/jobs/search-results/"
-  query: "robotics Engineer"
+  query: "Data Engineer"
   easy_apply: true
-  geo_id: 102299470
+#  geo_id: 102299470
+  geo_id: 105214831
   max_jobs: 15
 
 langchain:
   use_ai: true
-  using_ollama: false
-  model_name: "gpt-4o"
+  use_chatgpt: false
+  using_ollama: true
+#  model_name: "gpt-4o"
+  model_name: "qwen2.5-coder:7b-instruct-q4_K_M"
   temperature: 0.7
 
 user_data:

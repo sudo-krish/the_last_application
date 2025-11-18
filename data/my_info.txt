@@ -1,6 +1,9 @@
 willing to relocate: yes
 have a drivers license: yes
-notice period: 1 month
+notice period: 3 month
 sc clearance: yes
 will i require sponsorship: yes
 am i authorised to work in the uk: no
+What is your current compensation: 2000000,
+What is your expected CTC: 3000000,
+What is your current notice period: 90,
